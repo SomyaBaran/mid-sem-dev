@@ -30,4 +30,35 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
     //write code in here
+    const { success, data, error } = registerSchema.safeParse(req.body);
+    if (!success) {
+        return res.status(400).json({
+            msg: error.message
+        })
+    }
+    const { email, password } = data;
+
+    const user = await prisma.user.findUnique({
+        where: { email }
+    })
+    if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) {
+        return res.status(401).json({
+            msg: "invalid password"
+        });
+    }
+
+    const token = jwt.sign({
+        id: user.id,
+        email: user.email
+    }, ENV.JWT_SECRET);
+
+    return res.status(200).json({
+        msg: "Login successful",
+        token
+    });
 };
+
